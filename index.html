@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geografia Polski - Granice i Skrajne Punkty</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #map {
+            height: 520px;
+            width: 100%;
+            z-index: 10;
+        }
+        @media (max-width: 768px) {
+            #map {
+                height: 380px;
+            }
+        }
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #1f2937;
+            color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid #374151;
+        }
+        .custom-popup .leaflet-popup-tip {
+            background: #1f2937;
+        }
+        /* Custom map markers pulse effect */
+        .pulse-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pulse-ring {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.6); opacity: 0.8; }
+            50% { transform: scale(1.4); opacity: 0.3; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+        .active-tab {
+            border-bottom: 3px solid #dc2626;
+            color: #dc2626;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-400 flex items-center justify-center shadow-lg shadow-red-500/30">
+                    <i class="fa-solid font-bold text-white text-xl">PL</i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-red-400 bg-clip-text text-transparent">
+                        Geografia Polski: Granice & Punkty Skrajne
+                    </h1>
+                    <p class="text-xs text-slate-400">Interaktywna platforma edukacyjna</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex space-x-1 sm:space-x-4 text-sm font-medium">
+                <button id="tab-learn" onclick="switchTab('learn')" class="px-3 py-2 rounded-lg hover:bg-slate-700 transition active-tab">
+                    <i class="fa-solid font-bold fa-map-location-dot mr-2"></i>Eksploracja
+                </button>
+                <button id="tab-data" onclick="switchTab('data')" class="px-3 py-2 rounded-lg hover:bg-slate-700 text-slate-300 transition">
+                    <i class="fa-solid font-bold fa-table mr-2"></i>Tabele & Dane
+                </button>
+                <button id="tab-quiz" onclick="switchTab('quiz')" class="px-3 py-2 rounded-lg hover:bg-slate-700 text-slate-300 transition">
+                    <i class="fa-solid font-bold fa-graduation-cap mr-2"></i>Quiz Wiedzy
+                </button>
+            </nav>
+
+            <!-- Share & Challenge Button -->
+            <div class="flex items-center space-x-2">
+                <button onclick="openShareModal()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-red-600/30 hover:shadow-red-500/50 transition flex items-center gap-2">
+                    <i class="fa-solid font-bold fa-share-nodes"></i> Udostępnij / Rzuć Wyzwanie
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow">
+
+        <!-- SECTION 1: MAP & EXPLORATION -->
+        <section id="section-learn" class="space-y-6">
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl flex items-center space-x-4">
+                    <div class="p-3 bg-red-500/10 text-red-400 rounded-xl">
+                        <i class="fa-solid font-bold fa-ruler-horizontal text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">Łączna długość granic</div>
+                        <div class="text-xl font-bold text-white">3 511 km</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl flex items-center space-x-4">
+                    <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+                        <i class="fa-solid font-bold fa-water text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">Granica morska</div>
+                        <div class="text-xl font-bold text-white">440 km</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                        <i class="fa-solid font-bold fa-earth-europe text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">Liczba sąsiadów</div>
+                        <div class="text-xl font-bold text-white">7 państw</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl flex items-center space-x-4">
+                    <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+                        <i class="fa-solid font-bold fa-compass text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-medium">Skrajne punkty</div>
+                        <div class="text-xl font-bold text-white">4 punkty</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map and Information Side-panel -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Map Container -->
+                <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl relative">
+                    <div class="p-4 bg-slate-800/90 border-b border-slate-700 flex justify-between items-center flex-wrap gap-2">
+                        <span class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid font-bold fa-map text-red-500"></i> Interaktywna Mapa Polski
+                        </span>
+                        <div class="flex gap-2">
+                            <button onclick="resetMapView()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-xs rounded-lg transition text-slate-200 flex items-center gap-1">
+                                <i class="fa-solid font-bold fa-rotate-left"></i> Resetuj widok
+                            </button>
+                        </div>
+                    </div>
+                    <div id="map"></div>
+                    <div class="p-3 bg-slate-800/80 border-t border-slate-700/50 text-xs text-slate-400 flex justify-between items-center flex-wrap gap-2">
+                        <span><i class="fa-solid font-bold fa-circle-info text-red-400 mr-1"></i> Kliknij punkt lub odcinek graniczny, aby zobaczyć detale.</span>
+                        <span class="text-slate-500">Współrzędne podane w systemie WGS84</span>
+                    </div>
+                </div>
+
+                <!-- Info Card Panel -->
+                <div class="flex flex-col gap-4">
+                    <div id="info-card" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex-grow flex flex-col justify-between shadow-xl">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-4">
+                                <span id="info-badge" class="px-2.5 py-1 bg-red-500/20 text-red-400 text-xs font-semibold rounded-full border border-red-500/30">
+                                    Instrukcja
+                                </span>
+                                <i id="info-icon" class="fa-solid font-bold fa-hand-pointer text-slate-500 text-lg"></i>
+                            </div>
+                            <h2 id="info-title" class="text-xl font-bold text-white mb-2">
+                                Wybierz obiekt na mapie
+                            </h2>
+                            <p id="info-description" class="text-slate-300 text-sm leading-relaxed mb-4">
+                                Kliknij jeden z czerwonych markerów przedstawiających skrajne punkty Polski lub wielobarwne linie granic państwowych, aby poznać współrzędne, długości oraz dodatkowe ciekawostki geograficzne.
+                            </p>
+                        </div>
+
+                        <!-- Details Sub-box -->
+                        <div id="info-details" class="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4 text-xs space-y-2 text-slate-300">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Typ obiektu:</span>
+                                <span class="font-semibold text-slate-200">Punkt / Granica</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Status:</span>
+                                <span class="font-semibold text-emerald-400">Aktywny podgląd</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fast Selector Buttons -->
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+                        <div class="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Szybki wybór skrajnych punktów</div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="focusLocation('N')" class="p-2 bg-slate-700/60 hover:bg-slate-700 rounded-lg text-slate-200 transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid font-bold fa-arrow-up text-red-400 mr-1.5"></i> Północ</span>
+                                <span class="text-slate-400 font-mono">54°50'N</span>
+                            </button>
+                            <button onclick="focusLocation('S')" class="p-2 bg-slate-700/60 hover:bg-slate-700 rounded-lg text-slate-200 transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid font-bold fa-arrow-down text-blue-400 mr-1.5"></i> Południe</span>
+                                <span class="text-slate-400 font-mono">49°00'N</span>
+                            </button>
+                            <button onclick="focusLocation('W')" class="p-2 bg-slate-700/60 hover:bg-slate-700 rounded-lg text-slate-200 transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid font-bold fa-arrow-left text-amber-400 mr-1.5"></i> Zachód</span>
+                                <span class="text-slate-400 font-mono">14°07'E</span>
+                            </button>
+                            <button onclick="focusLocation('E')" class="p-2 bg-slate-700/60 hover:bg-slate-700 rounded-lg text-slate-200 transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid font-bold fa-arrow-right text-emerald-400 mr-1.5"></i> Wschód</span>
+                                <span class="text-slate-400 font-mono">24°09'E</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: TABLES & DATA -->
+        <section id="section-data" class="space-y-8 hidden">
+            <!-- Table 1: Extreme Points -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-6 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4 bg-slate-800/80">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid font-bold fa-compass text-red-500"></i> Najdalej Wysunięte Punkty Polski
+                        </h2>
+                        <p class="text-xs text-slate-400">Dokładne dane lokalizacyjne i administracyjne</p>
+                    </div>
+                    <span class="text-xs px-3 py-1 bg-red-500/10 text-red-400 rounded-full border border-red-500/20 font-medium">
+                        4 Punkty Kardynalne
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-900/80 border-b border-slate-700">
+                            <tr>
+                                <th class="px-6 py-4">Kierunek</th>
+                                <th class="px-6 py-4">Nazwa / Obiekt</th>
+                                <th class="px-6 py-4">Współrzędne</th>
+                                <th class="px-6 py-4">Gmina / Powiat</th>
+                                <th class="px-6 py-4">Województwo</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/60">
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="px-6 py-4 font-semibold text-red-400 flex items-center gap-2">
+                                    <i class="fa-solid font-bold fa-arrow-up"></i> Północ (N)
+                                </td>
+                                <td class="px-6 py-4 text-white font-medium">Jastrzębia Góra ("Gwiazda Północy")</td>
+                                <td class="px-6 py-4 font-mono text-amber-300">54°50'N, 18°18'E</td>
+                                <td class="px-6 py-4">Władysławowo, pucki</td>
+                                <td class="px-6 py-4">Pomorskie</td>
+                            </tr>
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="px-6 py-4 font-semibold text-blue-400 flex items-center gap-2">
+                                    <i class="fa-solid font-bold fa-arrow-down"></i> Południe (S)
+                                </td>
+                                <td class="px-6 py-4 text-white font-medium">Szczyt Opołonek (Bieszczady)</td>
+                                <td class="px-6 py-4 font-mono text-amber-300">49°00'N, 22°51'E</td>
+                                <td class="px-6 py-4">Lutowiska, bieszczadzki</td>
+                                <td class="px-6 py-4">Podkarpackie</td>
+                            </tr>
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="px-6 py-4 font-semibold text-amber-400 flex items-center gap-2">
+                                    <i class="fa-solid font-bold fa-arrow-left"></i> Zachód (W)
+                                </td>
+                                <td class="px-6 py-4 text-white font-medium">Zakole Odry koło Osinowa Dolnego</td>
+                                <td class="px-6 py-4 font-mono text-amber-300">52°50'N, 14°07'E</td>
+                                <td class="px-6 py-4">Cedynia, gryfiński</td>
+                                <td class="px-6 py-4">Zachodniopomorskie</td>
+                            </tr>
+                            <tr class="hover:bg-slate-700/30 transition">
+                                <td class="px-6 py-4 font-semibold text-emerald-400 flex items-center gap-2">
+                                    <i class="fa-solid font-bold fa-arrow-right"></i> Wschód (E)
+                                </td>
+                                <td class="px-6 py-4 text-white font-medium">Zakole Bugu koło Zosina</td>
+                                <td class="px-6 py-4 font-mono text-amber-300">50°52'N, 24°09'E</td>
+                                <td class="px-6 py-4">Horodło, hrubieszowski</td>
+                                <td class="px-6 py-4">Lubelskie</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Table 2: Border Lengths -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-6 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4 bg-slate-800/80">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid font-bold fa-map text-emerald-500"></i> Granice Polski i Sąsiedzi
+                        </h2>
+                        <p class="text-xs text-slate-400">Podział długości odcinków granicznych i udział procentowy</p>
+                    </div>
+                    <span class="text-xs px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 font-medium">
+                        Suma: 3 511 km
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300">
+                        <thead class="text-xs text-slate-400 uppercase bg-slate-900/80 border-b border-slate-700">
+                            <tr>
+                                <th class="px-6 py-4">Odcinek Granicy</th>
+                                <th class="px-6 py-4">Długość (km)</th>
+                                <th class="px-6 py-4">Udział w całości</th>
+                                <th class="px-6 py-4">Wykres wizualny</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/60" id="border-table-body">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: QUIZ & CHALLENGE -->
+        <section id="section-quiz" class="space-y-6 hidden">
+            <div class="max-w-2xl mx-auto bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-2xl relative">
+                
+                <!-- Quiz Header -->
+                <div id="quiz-header" class="flex justify-between items-center border-b border-slate-700 pb-4 mb-6">
+                    <div>
+                        <span class="text-xs font-semibold text-red-400 tracking-wider uppercase">Sprawdź swoją wiedzę</span>
+                        <h2 class="text-xl font-bold text-white">Quiz Geograficzny</h2>
+                    </div>
+                    <div id="quiz-progress" class="text-xs font-bold text-slate-300 bg-slate-700 px-3 py-1.5 rounded-lg">
+                        Pytanie 1 / 5
+                    </div>
+                </div>
+
+                <!-- Quiz Card Content -->
+                <div id="quiz-box">
+                    <h3 id="quiz-question" class="text-lg font-semibold text-slate-100 mb-6">
+                        Ładowanie pytania...
+                    </h3>
+
+                    <div id="quiz-options" class="grid grid-cols-1 gap-3 mb-6">
+                        <!-- Options generated dynamically -->
+                    </div>
+
+                    <div id="quiz-feedback" class="hidden p-4 rounded-xl text-sm font-medium mb-4"></div>
+
+                    <div class="flex justify-end">
+                        <button id="next-btn" onclick="nextQuestion()" class="hidden bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition">
+                            Następne pytanie <i class="fa-solid font-bold fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quiz Results Box (Hidden initially) -->
+                <div id="quiz-result" class="hidden text-center py-6 space-y-6">
+                    <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-500/40 text-3xl">
+                        <i class="fa-solid font-bold fa-trophy"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Gratulacje!</h3>
+                        <p id="quiz-score-text" class="text-slate-300 text-base">Twój wynik to 5 / 5 punktów.</p>
+                    </div>
+                    <div id="quiz-badge" class="inline-block px-4 py-2 bg-amber-500/20 text-amber-300 text-sm font-semibold rounded-full border border-amber-500/30">
+                        Ekspert Geografii Polski 🏆
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+                        <button onclick="restartQuiz()" class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition">
+                            <i class="fa-solid font-bold fa-rotate-right mr-2"></i> Spróbuj ponownie
+                        </button>
+                        <button onclick="openShareModal(true)" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow-lg shadow-red-600/30">
+                            <i class="fa-solid font-bold fa-share-nodes mr-2"></i> Udostępnij swój wynik
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeShareModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid font-bold fa-xmark"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="p-3 bg-red-500/20 text-red-400 rounded-xl">
+                    <i class="fa-solid font-bold fa-paper-plane text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white" id="share-modal-title">Udostępnij znajomym</h3>
+                    <p class="text-xs text-slate-400">Podziel się wiedzą geograficzną</p>
+                </div>
+            </div>
+            
+            <p id="share-modal-desc" class="text-slate-300 text-sm mb-4">
+                Wyślij ten link znajomym, aby mogli poznać skrajne punkty Polski i rzucić wyzwanie w quizie!
+            </p>
+
+            <div class="space-y-3">
+                <label class="text-xs text-slate-400 font-medium">Link do udostępnienia:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="share-url-input" readonly class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 w-full font-mono focus:outline-none">
+                    <button onclick="copyShareLink()" id="copy-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition">
+                        Kopiuj
+                    </button>
+                </div>
+            </div>
+
+            <div id="copy-notification" class="hidden mt-3 p-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs text-center rounded-lg">
+                <i class="fa-solid font-bold fa-check mr-1"></i> Skopiowano do schowka!
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Edukacja Geograficzna Polski &copy; Wszystkie prawa zastrzeżone.</p>
+            <p class="mt-1">Dane zgodne z Głównym Urzędem Statystycznym (GUS) oraz Służbą Graniczną.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Data Structures
+        const extremePoints = [
+            {
+                id: 'N',
+                name: 'Jastrzębia Góra ("Gwiazda Północy")',
+                direction: 'Północ (N)',
+                lat: 54.8333,
+                lng: 18.3000,
+                coordsText: "54°50'N, 18°18'E",
+                location: 'gmina Władysławowo, powiat pucki, woj. pomorskie',
+                desc: 'Najdalej na północ wysunięty punkt Polski znajduje się na klifowym wybrzeżu w Jastrzębiej Górze. Miejsce to upamiętnia pamiątkowy obelisk nazwany Gwiazdą Północy.',
+                color: '#ef4444'
+            },
+            {
+                id: 'S',
+                name: 'Szczyt Opołonek (Bieszczady)',
+                direction: 'Południe (S)',
+                lat: 49.0000,
+                lng: 22.8500,
+                coordsText: "49°00'N, 22°51'E",
+                location: 'gmina Lutowiska, powiat bieszczadzki, woj. podkarpackie',
+                desc: 'Najdalej wysunięty na południe punkt Polski leży na szczycie Opołonek w Bieszczadach Wysokich, na granicy z Ukrainą.',
+                color: '#3b82f6'
+            },
+            {
+                id: 'W',
+                name: 'Zakole Odry k. Osinowa Dolnego',
+                direction: 'Zachód (W)',
+                lat: 52.8333,
+                lng: 14.1167,
+                coordsText: "52°50'N, 14°07'E",
+                location: 'gmina Cedynia, powiat gryfiński, woj. zachodniopomorskie',
+                desc: 'Punkt ten znajduje się w zakolu rzeki Odry w miejscowości Osinów Dolny. Jest to najbardziej wysunięte na zachód miejsce w Polsce.',
+                color: '#f59e0b'
+            },
+            {
+                id: 'E',
+                name: 'Zakole Bugu k. Zosina',
+                direction: 'Wschód (E)',
+                lat: 50.8667,
+                lng: 24.1500,
+                coordsText: "50°52'N, 24°09'E",
+                location: 'gmina Horodło, powiat hrubieszowski, woj. lubelskie',
+                desc: 'Najdalej wysunięte na wschód miejsce znajduje się w zakolu rzeki Bug k. Zosina. Rzeka Bug stanowi tu naturalną granicę z Ukrainą.',
+                color: '#10b981'
+            }
+        ];
+
+        const bordersData = [
+            { name: 'Czechy', length: 796, color: '#3b82f6', coords: [[50.8, 14.8], [50.2, 16.5], [49.5, 18.8], [49.5, 19.5]] },
+            { name: 'Słowacja', length: 541, color: '#8b5cf6', coords: [[49.5, 19.5], [49.2, 21.0], [49.0, 22.5]] },
+            { name: 'Ukraina', length: 535, color: '#ec4899', coords: [[49.0, 22.5], [50.3, 24.1], [51.5, 23.6]] },
+            { name: 'Niemcy', length: 467, color: '#f59e0b', coords: [[53.9, 14.2], [52.8, 14.1], [51.5, 14.8], [50.8, 14.8]] },
+            { name: 'Białoruś', length: 418, color: '#10b981', coords: [[51.5, 23.6], [52.7, 23.8], [53.9, 23.5]] },
+            { name: 'Granica morska (Bałtyk)', length: 440, color: '#06b6d4', coords: [[53.9, 14.2], [54.8, 18.3], [54.4, 19.6]] },
+            { name: 'Rosja (Obwód Królewiecki)', length: 210, color: '#ef4444', coords: [[54.4, 19.6], [54.3, 22.8]] },
+            { name: 'Litwa', length: 104, color: '#84cc16', coords: [[54.3, 22.8], [53.9, 23.5]] }
+        ];
+
+        const totalBorderLength = 3511;
+
+        // Map Initialization
+        let map;
+        let markers = {};
+
+        function initMap() {
+            // Center of Poland roughly [52.0, 19.1]
+            map = L.map('map', {
+                center: [52.0, 19.1],
+                zoom: 6,
+                zoomControl: true
+            });
+
+            // Dark Mode Map Tile Layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Add Border Polylines
+            bordersData.forEach(border => {
+                const polyline = L.polyline(border.coords, {
+                    color: border.color,
+                    weight: 5,
+                    opacity: 0.8,
+                    dashArray: border.name.includes('morska') ? '8, 8' : null
+                }).addTo(map);
+
+                polyline.on('click', () => {
+                    displayBorderInfo(border);
+                });
+
+                polyline.bindTooltip(`<b>Granica: ${border.name}</b><br>Długość: ${border.length} km`, {
+                    sticky: true,
+                    className: 'custom-tooltip'
+                });
+            });
+
+            // Add Extreme Points Markers
+            extremePoints.forEach(point => {
+                const customIcon = L.divIcon({
+                    className: 'pulse-marker',
+                    html: `
+                        <div class="pulse-ring" style="background-color: ${point.color}"></div>
+                        <div style="background-color: ${point.color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; z-index: 10;"></div>
+                    `,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const marker = L.marker([point.lat, point.lng], { icon: customIcon }).addTo(map);
+                markers[point.id] = marker;
+
+                marker.on('click', () => {
+                    displayPointInfo(point);
+                });
+
+                marker.bindTooltip(`<b>${point.direction}</b><br>${point.name}`, {
+                    direction: 'top',
+                    offset: [0, -10]
+                });
+            });
+        }
+
+        // Display Info Handlers
+        function displayPointInfo(point) {
+            document.getElementById('info-badge').innerText = `Punkt Skrajny - ${point.direction}`;
+            document.getElementById('info-badge').className = "px-2.5 py-1 bg-red-500/20 text-red-400 text-xs font-semibold rounded-full border border-red-500/30";
+            document.getElementById('info-title').innerText = point.name;
+            document.getElementById('info-description').innerText = point.desc;
+            document.getElementById('info-icon').className = "fa-solid font-bold fa-location-dot text-red-400 text-lg";
+
+            document.getElementById('info-details').innerHTML = `
+                <div class="flex justify-between border-b border-slate-800 pb-1.5">
+                    <span class="text-slate-400">Współrzędne:</span>
+                    <span class="font-mono font-semibold text-amber-300">${point.coordsText}</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-800 pb-1.5 pt-1">
+                    <span class="text-slate-400">Lokalizacja:</span>
+                    <span class="font-semibold text-slate-200 text-right">${point.location}</span>
+                </div>
+            `;
+
+            map.flyTo([point.lat, point.lng], 9, { duration: 1.2 });
+        }
+
+        function displayBorderInfo(border) {
+            const percentage = ((border.length / totalBorderLength) * 100).toFixed(1);
+            document.getElementById('info-badge').innerText = `Odcinek Graniczny`;
+            document.getElementById('info-badge').className = "px-2.5 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/30";
+            document.getElementById('info-title').innerText = `Granica: ${border.name}`;
+            document.getElementById('info-description').innerText = `Długość odcinka granicy wynosi ${border.length} km, co stanowi ${percentage}% łącznej długości wszystkich granic Polski.`;
+            document.getElementById('info-icon').className = "fa-solid font-bold fa-route text-emerald-400 text-lg";
+
+            document.getElementById('info-details').innerHTML = `
+                <div class="flex justify-between border-b border-slate-800 pb-1.5">
+                    <span class="text-slate-400">Długość odcinka:</span>
+                    <span class="font-semibold text-emerald-400">${border.length} km</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-800 pb-1.5 pt-1">
+                    <span class="text-slate-400">Udział w granicach:</span>
+                    <span class="font-semibold text-slate-200">${percentage}%</span>
+                </div>
+            `;
+        }
+
+        function focusLocation(id) {
+            const point = extremePoints.find(p => p.id === id);
+            if (point) {
+                displayPointInfo(point);
+            }
+        }
+
+        function resetMapView() {
+            map.flyTo([52.0, 19.1], 6, { duration: 1 });
+        }
+
+        // Tab Switching Logic
+        function switchTab(tab) {
+            document.getElementById('section-learn').classList.add('hidden');
+            document.getElementById('section-data').classList.add('hidden');
+            document.getElementById('section-quiz').classList.add('hidden');
+
+            document.getElementById('tab-learn').className = "px-3 py-2 rounded-lg hover:bg-slate-700 text-slate-300 transition";
+            document.getElementById('tab-data').className = "px-3 py-2 rounded-lg hover:bg-slate-700 text-slate-300 transition";
+            document.getElementById('tab-quiz').className = "px-3 py-2 rounded-lg hover:bg-slate-700 text-slate-300 transition";
+
+            if (tab === 'learn') {
+                document.getElementById('section-learn').classList.remove('hidden');
+                document.getElementById('tab-learn').className = "px-3 py-2 rounded-lg hover:bg-slate-700 transition active-tab";
+                setTimeout(() => map.invalidateSize(), 200);
+            } else if (tab === 'data') {
+                document.getElementById('section-data').classList.remove('hidden');
+                document.getElementById('tab-data').className = "px-3 py-2 rounded-lg hover:bg-slate-700 transition active-tab";
+            } else if (tab === 'quiz') {
+                document.getElementById('section-quiz').classList.remove('hidden');
+                document.getElementById('tab-quiz').className = "px-3 py-2 rounded-lg hover:bg-slate-700 transition active-tab";
+            }
+        }
+
+        // Populate Table 2
+        function populateBorderTable() {
+            const tbody = document.getElementById('border-table-body');
+            tbody.innerHTML = '';
+
+            // Sort borders by length descending
+            const sortedBorders = [...bordersData].sort((a, b) => b.length - a.length);
+
+            sortedBorders.forEach(b => {
+                const percent = ((b.length / totalBorderLength) * 100).toFixed(1);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-700/30 transition";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-white flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${b.color}"></span>
+                        ${b.name}
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-slate-200">${b.length} km</td>
+                    <td class="px-6 py-4 font-mono text-slate-400">${percent}%</td>
+                    <td class="px-6 py-4 w-48">
+                        <div class="w-full bg-slate-700 rounded-full h-2">
+                            <div class="h-2 rounded-full" style="width: ${percent}%; background-color: ${b.color}"></div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Quiz Data and Logic
+        const quizQuestions = [
+            {
+                question: "Który punkt jest najdalej wysuniętym miejscem w Polsce na PÓŁNOC?",
+                options: [
+                    "Zakole Odry k. Osinowa Dolnego",
+                    "Jastrzębia Góra (Gwiazda Północy)",
+                    "Hel",
+                    "Zakole Bugu k. Zosina"
+                ],
+                correct: 1
+            },
+            {
+                question: "Z którym państwem Polska posiada NAJDŁUŻSZĄ granicę lądową?",
+                options: [
+                    "Z Niemcami (467 km)",
+                    "Ze Słowacją (541 km)",
+                    "Z Czechami (796 km)",
+                    "Z Ukrainą (535 km)"
+                ],
+                correct: 2
+            },
+            {
+                question: "Ile wynosi całkowita długość granic Polski (wraz z granicą morską)?",
+                options: [
+                    "2 850 km",
+                    "3 511 km",
+                    "4 120 km",
+                    "5 000 km"
+                ],
+                correct: 1
+            },
+            {
+                question: "Jakie są dokładne współrzędne najdalej wysuniętego punktu na POŁUDNIE (Szczyt Opołonek)?",
+                options: [
+                    "54°50'N, 18°18'E",
+                    "49°00'N, 22°51'E",
+                    "52°50'N, 14°07'E",
+                    "50°52'N, 24°09'E"
+                ],
+                correct: 1
+            },
+            {
+                question: "Który odcinek graniczny jest NAJKRÓTSZY?",
+                options: [
+                    "Granica z Litwą (104 km)",
+                    "Granica z Rosją (210 km)",
+                    "Granica z Białorusią (418 km)",
+                    "Granica morska (440 km)"
+                ],
+                correct: 0
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function loadQuestion() {
+            answered = false;
+            const q = quizQuestions[currentQuestion];
+            document.getElementById('quiz-progress').innerText = `Pytanie ${currentQuestion + 1} / ${quizQuestions.length}`;
+            document.getElementById('quiz-question').innerText = q.question;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-700/50 text-slate-200 text-sm font-medium transition flex items-center justify-between";
+                btn.innerHTML = `<span>${opt}</span> <i class="fa-regular fa-circle text-slate-500"></i>`;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const q = quizQuestions[currentQuestion];
+            const options = document.getElementById('quiz-options').children;
+
+            if (selectedIndex === q.correct) {
+                score++;
+                btnElement.className = "w-full text-left p-4 rounded-xl border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 text-sm font-medium flex items-center justify-between";
+                btnElement.querySelector('i').className = "fa-solid fa-circle-check text-emerald-400";
+            } else {
+                btnElement.className = "w-full text-left p-4 rounded-xl border border-red-500/50 bg-red-500/10 text-red-300 text-sm font-medium flex items-center justify-between";
+                btnElement.querySelector('i').className = "fa-solid fa-circle-xmark text-red-400";
+
+                // Highlight correct answer
+                options[q.correct].className = "w-full text-left p-4 rounded-xl border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 text-sm font-medium flex items-center justify-between";
+            }
+
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion < quizQuestions.length) {
+                loadQuestion();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function showQuizResults() {
+            document.getElementById('quiz-box').classList.add('hidden');
+            document.getElementById('quiz-header').classList.add('hidden');
+            document.getElementById('quiz-result').classList.remove('hidden');
+
+            document.getElementById('quiz-score-text').innerText = `Twój wynik to ${score} z ${quizQuestions.length} punktów!`;
+            
+            const badge = document.getElementById('quiz-badge');
+            if (score === 5) {
+                badge.innerText = "🏆 Mistrz Geografii Polski!";
+            } else if (score >= 3) {
+                badge.innerText = "⭐ Dobry wynik - Geograficzny Znawca";
+            } else {
+                badge.innerText = "📚 Spróbuj jeszcze raz i poćwicz na mapie!";
+            }
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            document.getElementById('quiz-box').classList.remove('hidden');
+            document.getElementById('quiz-header').classList.remove('hidden');
+            document.getElementById('quiz-result').classList.add('hidden');
+            loadQuestion();
+        }
+
+        // Modal & Share logic
+        function openShareModal(isChallenge = false) {
+            const modal = document.getElementById('share-modal');
+            const title = document.getElementById('share-modal-title');
+            const desc = document.getElementById('share-modal-desc');
+            const input = document.getElementById('share-url-input');
+
+            input.value = window.location.href;
+
+            if (isChallenge) {
+                title.innerText = "Rzuć wyzwanie znajomym!";
+                desc.innerText = `Zdobyłeś ${score}/${quizQuestions.length} punktów w quizie! Udostępnij link ze swoim wynikiem i zobacz, czy Twoi znajomi poradzą sobie lepiej.`;
+            } else {
+                title.innerText = "Udostępnij stronę znajomym";
+                desc.innerText = "Wyślij ten link, aby wspólne uczyć się granic i najdalej wysuniętych punktów Polski.";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.add('hidden');
+            document.getElementById('copy-notification').classList.add('hidden');
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('share-url-input');
+            input.select();
+            document.execCommand('copy');
+
+            const notif = document.getElementById('copy-notification');
+            notif.classList.remove('hidden');
+            setTimeout(() => {
+                notif.classList.add('hidden');
+            }, 3000);
+        }
+
+        // On Page Load
+        window.onload = function() {
+            initMap();
+            populateBorderTable();
+            loadQuestion();
+        };
+    </script>
+</body>
+</html>
